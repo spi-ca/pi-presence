@@ -29,9 +29,9 @@ The registry applies its ingress fence before retention and fanout. Consumers in
 - State and terminal events require a generation greater than the withdrawn generation, and must advance the source's `(generation, sequence)` ordering position.
 - Terminal `eventId` also must advance within its terminal generation.
 - A withdrawal must advance the existing order and its withdrawal high-water position.
-- A state or terminal in the same generation cannot reopen a withdrawn source, regardless of a higher sequence. Only a state in a higher generation opens a new lifecycle.
+- A state or terminal in the same generation cannot reopen a withdrawn source, regardless of a higher sequence. A state or terminal in a higher generation may open the next generation after withdrawal.
 
-This makes duplicate, stale, and pre-withdrawal data fail closed. It also means callers must advance generation to begin a lifecycle after a withdrawal.
+This makes duplicate, stale, and pre-withdrawal data fail closed. Callers must advance generation to begin activity after a withdrawal. A terminal that opens a higher generation is still never retained or replayed; only a later accepted state in that generation becomes the retained snapshot.
 
 ## Global registry boundary
 

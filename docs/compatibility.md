@@ -2,7 +2,7 @@
 
 ## Canonical release
 
-The canonical shared-protocol release is `@pi/presence` from repository [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence), planned as tag `v2-20260818-1`. The package identifier changes; the protocol version remains `2`.
+The canonical shared-protocol release is `@pi/presence` from repository [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence), with the next release planned as immutable tagged tree [`v2-20260818-2`](https://github.com/spi-ca/pi-presence/tree/v2-20260818-2). Release references must use an immutable tag/tree URL rather than a mutable branch URL; once published, a tag is never moved or recreated. The protocol version remains `2`.
 
 The only presence channels are:
 
@@ -29,7 +29,7 @@ The package is same-runtime and event-driven. It does not define a socket, RPC m
 
 A coordinated V2 release should verify all of the following:
 
-- imports use `@pi/presence` and the repository/release reference is `spi-ca/pi-presence` / `v2-20260818-1`;
+- imports use `@pi/presence` and the repository/release reference is the immutable tagged tree `spi-ca/pi-presence` / `v2-20260818-2`;
 - all four V2 channel names and the exact three ready capabilities are preserved;
 - producer-first and consumer-first retained-state replay work over a synchronous bus;
 - malformed, delayed, forged, duplicate, and cross-consumer payloads fail closed;

@@ -24,12 +24,12 @@ Use `encodeTerminalBatch(values, overflow?)` to construct a canonical batch from
 ```text
 record = source ":" generation ":" eventId ":" outcome
 source = "pi" | "subagent"
-generation = "0" | nonzero-digit { digit }   // at most 7 digits
-eventId = "0" | nonzero-digit { digit }      // at most 7 digits
+generation = canonical decimal integer in 0..1,000,000
+eventId = canonical decimal integer in 0..1,000,000
 outcome = "completed" | "failed" | "cancelled"
 ```
 
-There are no spaces. The empty string represents no records. `value` is at most 128 UTF-8 bytes. `overflow` is an integer in `0..1_000_000` and is not encoded into `value`.
+There are no spaces. The empty string represents no records. Both `generation` and `eventId` are integers in `0..1,000,000`; their decimal spellings have no leading zero except `0`. `value` is at most 128 UTF-8 bytes. `overflow` is an integer in `0..1,000,000` and is not encoded into `value`.
 
 Records are sorted by `source`, then numeric `generation`, numeric `eventId`, and `outcome`. `pi` consequently sorts before `subagent`. A `(source, generation, eventId)` tuple may occur only once; conflicting outcomes are also rejected.
 

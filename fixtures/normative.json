@@ -13,7 +13,10 @@
     {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 2, "source": "interaction", "state": "waiting", "attention": {"reason": "input_required", "occurrence": "new"}, "interaction": {"kind": "ask_user", "pending": 1}},
     {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 3, "source": "subagent", "state": "error", "attention": {"reason": "failure", "occurrence": "new"}, "subagents": {"running": 0, "cancelling": 0, "queued": 0, "completed": 1, "failed": 1, "cancelled": 0, "omitted": 0}}
   ],
-  "terminal": {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 4, "source": "subagent", "eventId": 1, "outcome": "failed"},
+  "terminals": [
+    {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 1, "source": "pi", "eventId": 1, "outcome": "completed"},
+    {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 4, "source": "subagent", "eventId": 1, "outcome": "failed"}
+  ],
   "withdraw": {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 5, "source": "interaction"},
   "terminalBatch": {
     "value": "pi:1:1:completed,subagent:1:1:failed",

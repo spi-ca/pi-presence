@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import fixture from "../fixtures/normative.json";
 import {
   CONSUMER_CAPABILITIES, EVENT_NAMES, MAX_INTEGER, buildPresenceStateV2, createSessionEpoch, isSessionEpoch,
-  parseConsumerReadyV2, parsePresenceStateInputV2, parsePresenceStateV2, parsePresenceTerminalInputV2, parsePresenceTerminalV2, parsePresenceWithdrawInputV2, parsePresenceWithdrawV2, parseTerminalBatch,
+  encodeTerminalBatch, parseConsumerReadyV2, parsePresenceStateInputV2, parsePresenceStateV2, parsePresenceTerminalInputV2, parsePresenceTerminalV2, parsePresenceWithdrawInputV2, parsePresenceWithdrawV2, parseTerminalBatch,
 } from "../index.ts";
 
 const epoch = fixture.sessionEpoch;
@@ -14,10 +14,11 @@ describe("normative protocol", () => {
     expect(CONSUMER_CAPABILITIES).toEqual(["presence-state-v2", "presence-terminal-v2", "presence-withdraw-v2"]);
     expect(isSessionEpoch(fixture.sessionEpoch)).toBe(true);
     for (const state of fixture.states) expect(parsePresenceStateV2(state)).toBeDefined();
-    expect(parsePresenceTerminalV2(fixture.terminal)).toBeDefined();
+    for (const terminal of fixture.terminals) expect(parsePresenceTerminalV2(terminal)).toBeDefined();
     expect(parsePresenceWithdrawV2(fixture.withdraw)).toBeDefined();
     expect(parseConsumerReadyV2(fixture.consumerReady)).toBeDefined();
     expect(parseTerminalBatch(fixture.terminalBatch.value, fixture.terminalBatch.overflow)).toEqual(fixture.terminalBatch);
+    expect(encodeTerminalBatch(fixture.terminals, fixture.terminalBatch.overflow)).toEqual(fixture.terminalBatch);
   });
   test("generates canonical 24-byte base64url epochs", () => {
     const generated = createSessionEpoch();

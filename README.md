@@ -2,7 +2,7 @@
 
 Shared, dependency-free V2 presence protocol for same-runtime Pi observers. It emits strict, frozen DTOs and canonical terminal batches; it starts no timers, connections, commands, or background work.
 
-**Release identity:** the canonical package is `@pi/presence` in [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence), planned for tag `v2-20260818-1`. The protocol version remains `2` and channel names remain V2.
+**Release identity:** the canonical package is `@pi/presence` in [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence), with the next release planned as the immutable tagged tree [`v2-20260818-2`](https://github.com/spi-ca/pi-presence/tree/v2-20260818-2). Release references must use an immutable tag/tree URL, never a mutable branch URL; published tags are not moved or recreated. The protocol version remains `2` and channel names remain V2.
 
 ## Use
 
