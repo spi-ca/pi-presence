@@ -2,7 +2,7 @@
 
 ## Canonical release
 
-The canonical shared-protocol release is `@pi/presence` from repository [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence), with the next release planned as immutable tagged tree [`v2-20260818-2`](https://github.com/spi-ca/pi-presence/tree/v2-20260818-2). Release references must use an immutable tag/tree URL rather than a mutable branch URL; once published, a tag is never moved or recreated. The protocol version remains `2`.
+The canonical shared-protocol package is `@pi/presence` from repository [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). [`v2-20260818-2`](https://github.com/spi-ca/pi-presence/tree/v2-20260818-2) is an immutable published release. Release references must use an immutable tag/tree URL rather than a mutable branch URL; once published, a tag is never moved or recreated. The protocol version remains `2`.
 
 The only presence channels are:
 
