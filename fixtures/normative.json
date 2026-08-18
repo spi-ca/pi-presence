@@ -15,5 +15,12 @@
   ],
   "terminal": {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 4, "source": "subagent", "eventId": 1, "outcome": "failed"},
   "withdraw": {"version": 2, "sessionEpoch": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "generation": 1, "sequence": 5, "source": "interaction"},
-  "terminalBatch": {"value": "pi:1:1:completed,subagent:1:1:failed", "overflow": 0}
+  "terminalBatch": {
+    "value": "pi:1:1:completed,subagent:1:1:failed",
+    "overflow": 0,
+    "records": [
+      {"source": "pi", "generation": 1, "eventId": 1, "outcome": "completed"},
+      {"source": "subagent", "generation": 1, "eventId": 1, "outcome": "failed"}
+    ]
+  }
 }

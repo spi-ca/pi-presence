@@ -1,5 +1,5 @@
 {
-  "name": "@pi/presence-v2",
+  "name": "@pi/presence",
   "version": "0.1.0",
   "description": "Private, dependency-free typed presence protocol for Pi observers",
   "private": true,

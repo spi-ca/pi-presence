@@ -3,8 +3,8 @@ import { EVENT_NAMES, CONSUMER_CAPABILITIES, CONSUMER_IDS, SOURCES, type Consume
 import { createSessionEpoch, isSessionEpoch, parsePresenceStateInputV2, parsePresenceStateV2, parsePresenceTerminalInputV2, parsePresenceTerminalV2, parsePresenceWithdrawInputV2, parsePresenceWithdrawV2 } from "./schema.ts";
 import { frozen, ownDataRecord } from "./strict.ts";
 
-const REGISTRY_SYMBOL = Symbol.for("@pi/presence-v2/registry");
-const ABI = "@pi/presence-v2:0.1.0:opaque-handles:3";
+const REGISTRY_SYMBOL = Symbol.for("@pi/presence/registry");
+const ABI = "@pi/presence:0.1.0:opaque-handles:3";
 const INTERFACE = "createPresenceProducer/createPresenceConsumer";
 
 type Fence = { generation: number; sequence: number; withdrawnGeneration: number; withdrawnSequence: number; terminalGeneration: number; terminalHighWater: number };

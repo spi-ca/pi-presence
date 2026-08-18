@@ -172,13 +172,13 @@ test("producer clean deactivation clears retained and all source fences for a fr
 test("global singleton property is immutable and reset is not public", () => {
   expect("resetForTests" in api).toBe(false);
   const source = producer("pi", () => undefined); source.activate();
-  const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for("@pi/presence-v2/registry"));
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for("@pi/presence/registry"));
   expect(descriptor?.configurable).toBe(false); expect(descriptor?.writable).toBe(false); expect(Object.isFrozen(descriptor?.value)).toBe(true);
 });
 
 test("an accessor-backed global registry slot fails closed without invoking its getter", async () => {
   const entry = new URL("../index.ts", import.meta.url).href;
-  const script = `Object.defineProperty(globalThis, Symbol.for("@pi/presence-v2/registry"), { get() { throw new Error("getter invoked"); }, configurable: false }); const api = await import(${JSON.stringify(entry)}); if (api.createPresenceProducer({ source: "pi", emit() {} }) !== undefined) throw new Error("did not fail closed");`;
+  const script = `Object.defineProperty(globalThis, Symbol.for("@pi/presence/registry"), { get() { throw new Error("getter invoked"); }, configurable: false }); const api = await import(${JSON.stringify(entry)}); if (api.createPresenceProducer({ source: "pi", emit() {} }) !== undefined) throw new Error("did not fail closed");`;
   const child = Bun.spawn({ cmd: ["bun", "-e", script], stdout: "pipe", stderr: "pipe" });
   expect(await child.exited).toBe(0);
 });

@@ -12,6 +12,7 @@ test("contains no legacy channel, dependencies, install hooks, polling, process,
   const forbidden = [new RegExp("pi-presence:[^\\\"\\\'`\\\\s]*v" + "1", "i"), /\bsetInterval\b/, /\bsetTimeout\b/, /\bchild_process\b/, /\bnet\b/, /\bdgram\b/, /\bprocess\s*\./];
   for (const [file, text] of source) expect(forbidden.some(pattern => pattern.test(text)), file).toBe(false);
   const manifest = JSON.parse(await readFile("package.json", "utf8")) as Record<string, unknown>;
+  expect(manifest.name).toBe("@pi/presence");
   for (const key of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) expect(key in manifest, key).toBe(false);
   const scripts = manifest.scripts as Record<string, string>;
   expect(Object.keys(scripts).some(key => /^(pre|post)?install$/.test(key))).toBe(false);
