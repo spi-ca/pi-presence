@@ -1,0 +1,22 @@
+{
+  "name": "@pi/presence-v2",
+  "version": "0.1.0",
+  "description": "Private, dependency-free typed presence protocol for Pi observers",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./fixtures/normative.json": "./fixtures/normative.json"
+  },
+  "files": ["index.ts", "src/**/*.ts", "fixtures/**/*.json", "README.md", "docs/**/*.md", "LICENSE"],
+  "scripts": {
+    "lint": "bun run scripts/lint.ts",
+    "check": "bun run scripts/check.ts",
+    "test": "bun test",
+    "ci": "bun run lint && bun run check && bun run test"
+  },
+  "packageManager": "bun@1.3.14",
+  "license": "MIT"
+}

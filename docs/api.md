@@ -1,0 +1,10 @@
+# API contract
+
+- `createPresenceProducer({ source, emit })` returns a frozen source-owned handle. Call `activate()`, then `publishState(snapshot)`, `publishTerminal(snapshot)`, `withdraw(snapshot)`, and finally `deactivate()`.
+- Producer snapshots are strict epoch-neutral V2 inputs. `parsePresenceStateInputV2` / `buildPresenceStateInputV2` (and terminal/withdraw counterparts) reject `sessionEpoch`. Wire parsers retain the epoch field.
+- `createPresenceConsumer({ id, sessionEpoch? })` returns a frozen handle with frozen `ready`. Install listeners calling `accept(name, payload)` before `activate(emitReady?)`. Activation registers, synchronously emits `consumer-ready` through the optional two-argument callback, then replays retained states.
+- `accept` first requires a live, one-shot, closure-private receipt for its exact frozen payload, target consumer, active producer incarnation, source, and event name; it consumes that receipt before parsing, then applies state, terminal, generation, sequence, and withdrawal high-water fences. It returns the accepted frozen wire event or `undefined`.
+- A source and consumer ID each have one active owning handle. Duplicates fail closed; only the owning handle can deactivate. Producer deactivation clears its retained state and ingress fence. Terminals are never retained.
+- The registry applies an authoritative ingress fence before retention or fanout. Same-generation state/terminal cannot reopen a withdrawn source; a higher generation can.
+- A producer emitter receives an epoch-tagged event for each active consumer. The Pi process event bus must dispatch each event synchronously: its target-bound receipt is removed when the emitter callback returns, so queued, delayed, replayed, or independently constructed payloads fail closed. Epochs remain freshness/routing markers, not credentials or authentication.
+- The global singleton is an immutable ABI-branded facade with closure-private state. An incompatible or accessor-backed global slot fails closed.
