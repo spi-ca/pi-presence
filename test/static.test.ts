@@ -7,13 +7,14 @@ async function files(directory: string): Promise<string[]> {
   return (await Promise.all(entries.map(entry => entry.isDirectory() ? files(join(directory, entry.name)) : [join(directory, entry.name)]))).flat();
 }
 
-test("contains no legacy channel, dependencies, install hooks, polling, process, or connection APIs", async () => {
+test("contains no legacy channel, runtime dependencies, install hooks, polling, process, or connection APIs", async () => {
   const source = await Promise.all((await files("src")).map(async file => [file, await readFile(file, "utf8")] as const));
   const forbidden = [new RegExp("pi-presence:[^\\\"\\\'`\\\\s]*v" + "1", "i"), /\bsetInterval\b/, /\bsetTimeout\b/, /\bchild_process\b/, /\bnet\b/, /\bdgram\b/, /\bprocess\s*\./];
   for (const [file, text] of source) expect(forbidden.some(pattern => pattern.test(text)), file).toBe(false);
   const manifest = JSON.parse(await readFile("package.json", "utf8")) as Record<string, unknown>;
   expect(manifest.name).toBe("@pi/presence");
-  for (const key of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) expect(key in manifest, key).toBe(false);
+  for (const key of ["dependencies", "optionalDependencies", "peerDependencies"]) expect(key in manifest, key).toBe(false);
+  expect(manifest.devDependencies).toEqual({ "@types/bun": "1.3.14", typescript: "5.9.3" });
   const scripts = manifest.scripts as Record<string, string>;
   expect(Object.keys(scripts).some(key => /^(pre|post)?install$/.test(key))).toBe(false);
   expect(manifest.exports).toEqual({ ".": "./index.ts", "./fixtures/normative.json": "./fixtures/normative.json" });

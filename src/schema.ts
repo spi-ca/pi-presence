@@ -3,7 +3,7 @@ import {
   type Attention, type AttentionReason, type ConsumerReadyV2, type PresenceSource, type PresenceState, type PresenceStateInputV2, type PresenceStateV2,
   type PresenceTerminalInputV2, type PresenceTerminalV2, type PresenceWithdrawInputV2, type PresenceWithdrawV2, type TerminalOutcome,
 } from "./types.ts";
-import { fixedStringArray, frozen, isInteger, MAX_INTEGER, ownDataRecord } from "./strict.ts";
+import { fixedStringArray, frozen, frozenRecord, isInteger, MAX_INTEGER, ownDataRecord } from "./strict.ts";
 
 const EPOCH_PATTERN = /^[A-Za-z0-9_-]{32}$/;
 const STATE_KEYS = ["version", "sessionEpoch", "generation", "sequence", "source", "state", "progress", "attention", "interaction", "subagents"] as const;
@@ -37,23 +37,23 @@ export function createSessionEpoch(): string {
 function parseProgress(value: unknown) {
   const record = ownDataRecord(value, ["completed", "total"]);
   if (!record || !isInteger(record.completed) || !isInteger(record.total, 1) || record.completed > record.total) return undefined;
-  return frozen({ completed: record.completed, total: record.total });
+  return frozenRecord({ completed: record.completed, total: record.total });
 }
 function parseAttention(value: unknown): Attention | undefined {
   const record = ownDataRecord(value, ["reason", "occurrence"]);
   if (!record || !member(ATTENTION_REASONS, record.reason) || (record.occurrence !== "new" && record.occurrence !== "retained")) return undefined;
-  return frozen({ reason: record.reason as AttentionReason, occurrence: record.occurrence });
+  return frozenRecord({ reason: record.reason as AttentionReason, occurrence: record.occurrence });
 }
 function parseInteraction(value: unknown) {
   const record = ownDataRecord(value, ["kind", "pending"]);
   if (!record || record.kind !== "ask_user" || !isInteger(record.pending)) return undefined;
-  return frozen({ kind: "ask_user" as const, pending: record.pending });
+  return frozenRecord({ kind: "ask_user" as const, pending: record.pending });
 }
 function parseSubagents(value: unknown) {
   const keys = ["running", "cancelling", "queued", "completed", "failed", "cancelled", "omitted"] as const;
   const record = ownDataRecord(value, keys);
   if (!record || keys.some(key => !isInteger(record[key]))) return undefined;
-  return frozen({ running: record.running as number, cancelling: record.cancelling as number, queued: record.queued as number, completed: record.completed as number, failed: record.failed as number, cancelled: record.cancelled as number, omitted: record.omitted as number });
+  return frozenRecord({ running: record.running as number, cancelling: record.cancelling as number, queued: record.queued as number, completed: record.completed as number, failed: record.failed as number, cancelled: record.cancelled as number, omitted: record.omitted as number });
 }
 
 function parseState(value: unknown, wire: boolean): PresenceStateInputV2 | PresenceStateV2 | undefined {
@@ -72,23 +72,23 @@ function parseState(value: unknown, wire: boolean): PresenceStateInputV2 | Prese
     if (state !== "waiting" || !interaction || attention?.reason !== "input_required" || progress || subagents) return undefined;
   } else if (interaction || (attention?.reason === "input_required")) return undefined;
   if (attention?.reason === "blocked" && ((source !== "pi" && source !== "subagent") || state !== "waiting")) return undefined;
-  if (attention?.reason === "failure" && ((source !== "pi" && source !== "subagent") || (state !== "error" && !(source === "subagent" && (subagents?.failed ?? 0) > 0)))) return undefined;
+  if (attention?.reason === "failure" && ((source !== "pi" && source !== "subagent") || (source === "pi" && state !== "error") || (source === "subagent" && state !== "error" && !subagents))) return undefined;
   if (subagents && source !== "subagent") return undefined;
   const fields = { version: 2 as const, generation: record.generation, sequence: record.sequence, source, state, ...(progress ? { progress } : {}), ...(attention ? { attention } : {}), ...(interaction ? { interaction } : {}), ...(subagents ? { subagents } : {}) };
-  return wire ? frozen({ ...fields, sessionEpoch: record.sessionEpoch as string }) as PresenceStateV2 : frozen(fields) as PresenceStateInputV2;
+  return wire ? frozenRecord({ ...fields, sessionEpoch: record.sessionEpoch as string }) as PresenceStateV2 : frozenRecord(fields) as PresenceStateInputV2;
 }
 
 function parseTerminal(value: unknown, wire: boolean): PresenceTerminalInputV2 | PresenceTerminalV2 | undefined {
   const record = ownDataRecord(value, wire ? TERMINAL_KEYS : TERMINAL_INPUT_KEYS);
   if (!record || record.version !== 2 || (wire && !isSessionEpoch(record.sessionEpoch)) || !isInteger(record.generation) || !isInteger(record.sequence) || !(record.source === "pi" || record.source === "subagent") || !isInteger(record.eventId) || !member(TERMINAL_OUTCOMES, record.outcome)) return undefined;
   const fields = { version: 2 as const, generation: record.generation, sequence: record.sequence, source: record.source as "pi" | "subagent", eventId: record.eventId, outcome: record.outcome as TerminalOutcome };
-  return wire ? frozen({ ...fields, sessionEpoch: record.sessionEpoch as string }) as PresenceTerminalV2 : frozen(fields) as PresenceTerminalInputV2;
+  return wire ? frozenRecord({ ...fields, sessionEpoch: record.sessionEpoch as string }) as PresenceTerminalV2 : frozenRecord(fields) as PresenceTerminalInputV2;
 }
 function parseWithdraw(value: unknown, wire: boolean): PresenceWithdrawInputV2 | PresenceWithdrawV2 | undefined {
   const record = ownDataRecord(value, wire ? WITHDRAW_KEYS : WITHDRAW_INPUT_KEYS);
   if (!record || record.version !== 2 || (wire && !isSessionEpoch(record.sessionEpoch)) || !isInteger(record.generation) || !isInteger(record.sequence) || !member(SOURCES, record.source)) return undefined;
   const fields = { version: 2 as const, generation: record.generation, sequence: record.sequence, source: record.source as PresenceSource };
-  return wire ? frozen({ ...fields, sessionEpoch: record.sessionEpoch as string }) as PresenceWithdrawV2 : frozen(fields) as PresenceWithdrawInputV2;
+  return wire ? frozenRecord({ ...fields, sessionEpoch: record.sessionEpoch as string }) as PresenceWithdrawV2 : frozenRecord(fields) as PresenceWithdrawInputV2;
 }
 
 export const parsePresenceStateV2 = (value: unknown) => parseState(value, true) as PresenceStateV2 | undefined;
@@ -103,7 +103,7 @@ export function parseConsumerReadyV2(value: unknown): ConsumerReadyV2 | undefine
   if (!record || record.version !== 2 || !isSessionEpoch(record.sessionEpoch)) return undefined;
   const consumer = ownDataRecord(record.consumer, ["id", "capabilities"]);
   if (!consumer || !member(CONSUMER_IDS, consumer.id) || !fixedStringArray(consumer.capabilities, CONSUMER_CAPABILITIES)) return undefined;
-  return frozen({ version: 2 as const, sessionEpoch: record.sessionEpoch, consumer: frozen({ id: consumer.id, capabilities: frozen([...CONSUMER_CAPABILITIES]) as ConsumerReadyV2["consumer"]["capabilities"] }) });
+  return frozenRecord({ version: 2 as const, sessionEpoch: record.sessionEpoch, consumer: frozenRecord({ id: consumer.id, capabilities: frozen([...CONSUMER_CAPABILITIES]) as ConsumerReadyV2["consumer"]["capabilities"] }) });
 }
 
 function build<T>(parsed: T | undefined, message: string): T { if (!parsed) throw new TypeError(message); return parsed; }

@@ -53,3 +53,8 @@ export function fixedStringArray(value: unknown, expected: readonly string[]): b
 export function frozen<T extends object>(value: T): Readonly<T> {
   return Object.freeze(value);
 }
+
+/** Clones a public DTO's exact enumerable own fields onto a null-prototype record before freezing. */
+export function frozenRecord<T extends object>(value: T): Readonly<T> {
+  return frozen(Object.assign(Object.create(null), value) as T);
+}

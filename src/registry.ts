@@ -1,28 +1,31 @@
 import { types } from "node:util";
-import { EVENT_NAMES, CONSUMER_CAPABILITIES, CONSUMER_IDS, SOURCES, type ConsumerId, type ConsumerReadyEmit, type ConsumerReadyV2, type PresenceConsumerHandle, type PresenceEventV2, type PresenceProducerHandle, type PresenceSource, type PresenceStateInputV2, type PresenceStateV2, type PresenceTerminalInputV2, type PresenceTerminalV2, type PresenceWithdrawInputV2, type PresenceWithdrawV2, type ProducerEmit } from "./types.ts";
+import { EVENT_NAMES, CONSUMER_CAPABILITIES, CONSUMER_IDS, SOURCES, type ConsumerId, type ConsumerReadyEmit, type ConsumerReadyV2, type PresenceConsumerHandle, type PresenceEventV2, type PresenceProducerHandle, type PresenceSource, type PresenceState, type PresenceStateInputV2, type PresenceStateV2, type PresenceTerminalInputV2, type PresenceTerminalV2, type PresenceWithdrawInputV2, type PresenceWithdrawV2, type ProducerEmit } from "./types.ts";
 import { createSessionEpoch, isSessionEpoch, parsePresenceStateInputV2, parsePresenceStateV2, parsePresenceTerminalInputV2, parsePresenceTerminalV2, parsePresenceWithdrawInputV2, parsePresenceWithdrawV2 } from "./schema.ts";
-import { frozen, ownDataRecord } from "./strict.ts";
+import { frozen, frozenRecord, ownDataRecord } from "./strict.ts";
 
 const REGISTRY_SYMBOL = Symbol.for("@pi/presence/registry");
 const ABI = "@pi/presence:0.1.0:opaque-handles:3";
 const INTERFACE = "createPresenceProducer/createPresenceConsumer";
 
 type Fence = { generation: number; sequence: number; withdrawnGeneration: number; withdrawnSequence: number; terminalGeneration: number; terminalHighWater: number };
+type RegistryInputEvent = PresenceStateInputV2 | PresenceTerminalInputV2 | PresenceWithdrawInputV2;
 type Producer = { source: PresenceSource; emit: ProducerEmit; activeVersion: number };
-type Consumer = { id: ConsumerId; epoch: string; ready: ConsumerReadyV2; fences: Map<PresenceSource, Fence> };
-type DeliveryReceipt = { consumer: Consumer; producer: Producer; source: PresenceSource; activeVersion: number; eventName: string };
+type Consumer = { id: ConsumerId; epoch: string; ready: ConsumerReadyV2; activeVersion: number; fences: Map<PresenceSource, Fence> };
+type DeliveryReceipt = { consumer: Consumer; consumerVersion: number; producer: Producer; source: PresenceSource; activeVersion: number; eventName: string };
 type PrivateRegistry = { consumers: Map<ConsumerId, Consumer>; producers: Map<PresenceSource, Producer>; retained: Map<PresenceSource, PresenceStateInputV2>; ingress: Map<PresenceSource, Fence> };
 type GlobalRegistry = Readonly<{ abi: string; interface: string; createProducer: (value: unknown) => PresenceProducerHandle | undefined; createConsumer: (value: unknown) => PresenceConsumerHandle | undefined }>;
 
 const freshFence = (): Fence => ({ generation: -1, sequence: -1, withdrawnGeneration: -1, withdrawnSequence: -1, terminalGeneration: -1, terminalHighWater: -1 });
 function fenceFor(fences: Map<PresenceSource, Fence>, source: PresenceSource): Fence { let fence = fences.get(source); if (!fence) { fence = freshFence(); fences.set(source, fence); } return fence; }
+function hasState<T extends RegistryInputEvent | PresenceEventV2>(event: T): event is Extract<T, { state: PresenceState }> { return Object.hasOwn(event, "state"); }
+function hasEventId<T extends RegistryInputEvent | PresenceEventV2>(event: T): event is Extract<T, { eventId: number }> { return Object.hasOwn(event, "eventId"); }
 
 /** Shared ingress/consumer ordering rule.  -1 is an internal-only empty-fence sentinel. */
-function acceptFence(fences: Map<PresenceSource, Fence>, event: PresenceStateInputV2 | PresenceTerminalInputV2 | PresenceWithdrawInputV2): boolean {
+function acceptFence(fences: Map<PresenceSource, Fence>, event: RegistryInputEvent): boolean {
   const fence = fenceFor(fences, event.source);
-  if ("state" in event || "eventId" in event) {
+  if (hasState(event) || hasEventId(event)) {
     if (event.generation <= fence.withdrawnGeneration || event.generation < fence.generation || (event.generation === fence.generation && event.sequence <= fence.sequence)) return false;
-    if ("eventId" in event) {
+    if (hasEventId(event)) {
       if (event.generation > fence.generation) { fence.terminalGeneration = event.generation; fence.terminalHighWater = -1; }
       if (event.generation !== fence.terminalGeneration || event.eventId <= fence.terminalHighWater) return false;
       fence.terminalHighWater = event.eventId;
@@ -40,35 +43,36 @@ function acceptFence(fences: Map<PresenceSource, Fence>, event: PresenceStateInp
 }
 
 function tagState(event: PresenceStateInputV2, epoch: string, retained: boolean): PresenceStateV2 {
-  return frozen({ ...event, sessionEpoch: epoch, ...(event.attention ? { attention: frozen({ ...event.attention, occurrence: retained ? "retained" as const : event.attention.occurrence }) } : {}) });
+  const attention = Object.hasOwn(event, "attention") ? event.attention : undefined;
+  return frozenRecord({ ...event, sessionEpoch: epoch, ...(attention ? { attention: frozenRecord({ ...attention, occurrence: retained ? "retained" as const : attention.occurrence }) } : {}) }) as PresenceStateV2;
 }
-function tagEvent(event: PresenceTerminalInputV2 | PresenceWithdrawInputV2, epoch: string): PresenceTerminalV2 | PresenceWithdrawV2 { return frozen({ ...event, sessionEpoch: epoch }); }
-function eventName(event: PresenceEventV2): string { return "eventId" in event ? EVENT_NAMES.terminal : "state" in event ? EVENT_NAMES.state : EVENT_NAMES.withdraw; }
+function tagEvent(event: PresenceTerminalInputV2 | PresenceWithdrawInputV2, epoch: string): PresenceTerminalV2 | PresenceWithdrawV2 { return frozenRecord({ ...event, sessionEpoch: epoch }); }
+function eventName(event: PresenceEventV2): string { return hasEventId(event) ? EVENT_NAMES.terminal : hasState(event) ? EVENT_NAMES.state : EVENT_NAMES.withdraw; }
 function freezeMethod<T extends Function>(method: T): T { return Object.freeze(method); }
 
 function createGlobalRegistry(): GlobalRegistry {
   const state: PrivateRegistry = { consumers: new Map(), producers: new Map(), retained: new Map(), ingress: new Map() };
   const receipts = new WeakMap<object, DeliveryReceipt>();
 
-  function deliver(producer: Producer, version: number, consumer: Consumer, event: PresenceStateInputV2 | PresenceTerminalInputV2 | PresenceWithdrawInputV2, retained = false): void {
-    if (state.producers.get(producer.source) !== producer || producer.activeVersion !== version || state.consumers.get(consumer.id) !== consumer) return;
-    const tagged = "state" in event ? tagState(event, consumer.epoch, retained) : tagEvent(event, consumer.epoch);
+  function deliver(producer: Producer, version: number, consumer: Consumer, consumerVersion: number, event: PresenceStateInputV2 | PresenceTerminalInputV2 | PresenceWithdrawInputV2, retained = false): void {
+    if (state.producers.get(producer.source) !== producer || producer.activeVersion !== version || state.consumers.get(consumer.id) !== consumer || consumer.activeVersion !== consumerVersion) return;
+    const tagged = hasState(event) ? tagState(event, consumer.epoch, retained) : tagEvent(event, consumer.epoch);
     const name = eventName(tagged);
-    receipts.set(tagged, { consumer, producer, source: producer.source, activeVersion: version, eventName: name });
+    receipts.set(tagged, { consumer, consumerVersion, producer, source: producer.source, activeVersion: version, eventName: name });
     try { producer.emit(name, tagged); } catch { /* delivery is best effort; retention is already coherent */ } finally { receipts.delete(tagged); }
   }
-  function replay(producer: Producer, version: number, consumer: Consumer): void {
+  function replay(producer: Producer, version: number, consumer: Consumer, consumerVersion: number): void {
     const snapshot = state.retained.get(producer.source);
-    if (snapshot) deliver(producer, version, consumer, snapshot, true);
+    if (snapshot) deliver(producer, version, consumer, consumerVersion, snapshot, true);
   }
   function dispatch(producer: Producer, event: PresenceStateInputV2 | PresenceTerminalInputV2 | PresenceWithdrawInputV2): boolean {
     const version = producer.activeVersion;
     if (state.producers.get(producer.source) !== producer || event.source !== producer.source || !acceptFence(state.ingress, event)) return false;
-    if ("state" in event) state.retained.set(event.source, event);
-    else if (!("eventId" in event)) state.retained.delete(event.source);
+    if (hasState(event)) state.retained.set(event.source, event);
+    else if (!hasEventId(event)) state.retained.delete(event.source);
     for (const consumer of [...state.consumers.values()]) {
       if (state.producers.get(producer.source) !== producer || producer.activeVersion !== version) break;
-      deliver(producer, version, consumer, event);
+      deliver(producer, version, consumer, consumer.activeVersion, event);
     }
     return true;
   }
@@ -83,7 +87,7 @@ function createGlobalRegistry(): GlobalRegistry {
       state.producers.set(producer.source, producer);
       for (const consumer of [...state.consumers.values()]) {
         if (state.producers.get(producer.source) !== producer || producer.activeVersion !== version) break;
-        replay(producer, version, consumer);
+        replay(producer, version, consumer, consumer.activeVersion);
       }
       return state.producers.get(producer.source) === producer && producer.activeVersion === version;
     });
@@ -105,26 +109,32 @@ function createGlobalRegistry(): GlobalRegistry {
     if (!input || typeof input.id !== "string" || !(CONSUMER_IDS as readonly string[]).includes(input.id) || (Object.hasOwn(input, "sessionEpoch") && !isSessionEpoch(input.sessionEpoch))) return undefined;
     const id = input.id as ConsumerId;
     const epoch = (input.sessionEpoch as string | undefined) ?? createSessionEpoch();
-    const ready = frozen({ version: 2 as const, sessionEpoch: epoch, consumer: frozen({ id, capabilities: frozen([...CONSUMER_CAPABILITIES]) as ConsumerReadyV2["consumer"]["capabilities"] }) });
-    const consumer: Consumer = { id, epoch, ready, fences: new Map() };
+    const ready = frozenRecord({ version: 2 as const, sessionEpoch: epoch, consumer: frozenRecord({ id, capabilities: frozen([...CONSUMER_CAPABILITIES]) as ConsumerReadyV2["consumer"]["capabilities"] }) });
+    const consumer: Consumer = { id, epoch, ready, activeVersion: 0, fences: new Map() };
     const activate = freezeMethod((emitReady?: ConsumerReadyEmit) => {
       if (emitReady !== undefined && typeof emitReady !== "function") return false;
       if (state.consumers.has(id)) return false;
+      const version = consumer.activeVersion + 1;
+      consumer.activeVersion = version;
+      consumer.fences.clear();
       state.consumers.set(id, consumer);
       if (emitReady) { try { emitReady(EVENT_NAMES.consumerReady, ready); } catch { /* ready is synchronous best effort */ } }
-      for (const producer of [...state.producers.values()]) replay(producer, producer.activeVersion, consumer);
-      return state.consumers.get(id) === consumer;
+      for (const producer of [...state.producers.values()]) {
+        if (state.consumers.get(id) !== consumer || consumer.activeVersion !== version) break;
+        replay(producer, producer.activeVersion, consumer, version);
+      }
+      return state.consumers.get(id) === consumer && consumer.activeVersion === version;
     });
     const accept = freezeMethod((name: unknown, payload: unknown): PresenceEventV2 | undefined => {
       if (payload === null || typeof payload !== "object") return undefined;
       // Identity lookup is deliberately the only payload operation before receipt consumption.
       const receipt = receipts.get(payload);
-      if (!receipt || typeof name !== "string" || receipt.consumer !== consumer || receipt.eventName !== name || receipt.source !== receipt.producer.source || receipt.activeVersion !== receipt.producer.activeVersion || state.consumers.get(id) !== consumer || state.producers.get(receipt.source) !== receipt.producer) return undefined;
+      if (!receipt || typeof name !== "string" || receipt.consumer !== consumer || receipt.consumerVersion !== consumer.activeVersion || receipt.eventName !== name || receipt.source !== receipt.producer.source || receipt.activeVersion !== receipt.producer.activeVersion || state.consumers.get(id) !== consumer || state.producers.get(receipt.source) !== receipt.producer) return undefined;
       receipts.delete(payload);
       const event = name === EVENT_NAMES.state ? parsePresenceStateV2(payload) : name === EVENT_NAMES.terminal ? parsePresenceTerminalV2(payload) : name === EVENT_NAMES.withdraw ? parsePresenceWithdrawV2(payload) : undefined;
       if (!event || event.sessionEpoch !== epoch || event.source !== receipt.source || eventName(event) !== name) return undefined;
-      const neutral = "state" in event ? (() => { const { sessionEpoch: _epoch, ...value } = event; return value; })() : (() => { const { sessionEpoch: _epoch, ...value } = event; return value; })();
-      return acceptFence(consumer.fences, neutral) ? event : undefined;
+      const { sessionEpoch: _epoch, ...neutral } = event;
+      return acceptFence(consumer.fences, neutral as RegistryInputEvent) ? event : undefined;
     });
     const deactivate = freezeMethod(() => state.consumers.get(id) === consumer ? (state.consumers.delete(id), true) : false);
     return frozen({ ready, activate, accept, deactivate });

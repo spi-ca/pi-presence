@@ -28,17 +28,48 @@ export type Attention = Readonly<{ reason: AttentionReason; occurrence: "new" | 
 export type Interaction = Readonly<{ kind: "ask_user"; pending: number }>;
 export type Subagents = Readonly<{ running: number; cancelling: number; queued: number; completed: number; failed: number; cancelled: number; omitted: number }>;
 
-type StateFields = Readonly<{ version: 2; generation: number; sequence: number; source: PresenceSource; state: PresenceState; progress?: Progress; attention?: Attention; interaction?: Interaction; subagents?: Subagents }>;
+type StateBase<S extends PresenceSource, T extends PresenceState> = Readonly<{
+  version: 2;
+  generation: number;
+  sequence: number;
+  source: S;
+  state: T;
+  progress?: Progress;
+}>;
+type BlockedAttention = Readonly<{ reason: "blocked"; occurrence: "new" | "retained" }>;
+type FailureAttention = Readonly<{ reason: "failure"; occurrence: "new" | "retained" }>;
+type InputRequiredAttention = Readonly<{ reason: "input_required"; occurrence: "new" | "retained" }>;
+type PiWaitingState = StateBase<"pi", "waiting"> & Readonly<{ attention?: BlockedAttention; interaction?: never; subagents?: never }>;
+type PiErrorState = StateBase<"pi", "error"> & Readonly<{ attention?: FailureAttention; interaction?: never; subagents?: never }>;
+type PiOrdinaryState = StateBase<"pi", Exclude<PresenceState, "waiting" | "error">> & Readonly<{ attention?: never; interaction?: never; subagents?: never }>;
+type TodoState = StateBase<"todo", PresenceState> & Readonly<{ attention?: never; interaction?: never; subagents?: never }>;
+type SubagentOrdinaryState = StateBase<"subagent", PresenceState> & Readonly<{ attention?: never; interaction?: never; subagents?: Subagents }>;
+type SubagentBlockedState = StateBase<"subagent", "waiting"> & Readonly<{ attention: BlockedAttention; interaction?: never; subagents?: Subagents }>;
+type SubagentErrorState = StateBase<"subagent", "error"> & Readonly<{ attention: FailureAttention; interaction?: never; subagents?: Subagents }>;
+type SubagentSummaryFailureState = StateBase<"subagent", PresenceState> & Readonly<{ attention: FailureAttention; interaction?: never; subagents: Subagents }>;
+type InteractionState = Readonly<{
+  version: 2;
+  generation: number;
+  sequence: number;
+  source: "interaction";
+  state: "waiting";
+  attention: InputRequiredAttention;
+  interaction: Interaction;
+  progress?: never;
+  subagents?: never;
+}>;
+type StateFields = PiWaitingState | PiErrorState | PiOrdinaryState | TodoState | SubagentOrdinaryState | SubagentBlockedState | SubagentErrorState | SubagentSummaryFailureState | InteractionState;
 type TerminalFields = Readonly<{ version: 2; generation: number; sequence: number; source: "pi" | "subagent"; eventId: number; outcome: TerminalOutcome }>;
 type WithdrawFields = Readonly<{ version: 2; generation: number; sequence: number; source: PresenceSource }>;
+type WithSessionEpoch<T> = T extends unknown ? Readonly<T & { sessionEpoch: string }> : never;
 
-/** Producer-facing DTOs deliberately contain no session epoch. */
+/** Producer-facing DTOs deliberately contain no session epoch. State inputs are source-aware unions. */
 export type PresenceStateInputV2 = StateFields;
 export type PresenceTerminalInputV2 = TerminalFields;
 export type PresenceWithdrawInputV2 = WithdrawFields;
 
-/** Wire DTOs are tagged by the registry for one consumer epoch. */
-export type PresenceStateV2 = Readonly<StateFields & { sessionEpoch: string }>;
+/** Wire DTOs are tagged by the registry for one consumer epoch. State wires are source-aware unions. */
+export type PresenceStateV2 = WithSessionEpoch<StateFields>;
 export type PresenceTerminalV2 = Readonly<TerminalFields & { sessionEpoch: string }>;
 export type PresenceWithdrawV2 = Readonly<WithdrawFields & { sessionEpoch: string }>;
 

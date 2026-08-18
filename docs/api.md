@@ -25,10 +25,10 @@ The corresponding types are `PresenceSource`, `PresenceState`, `AttentionReason`
 | `Attention` | `{ reason, occurrence }`, where occurrence is `new` or `retained`. |
 | `Interaction` | `{ kind: "ask_user", pending }`. |
 | `Subagents` | Numeric `running`, `cancelling`, `queued`, `completed`, `failed`, `cancelled`, and `omitted` aggregate. |
-| `PresenceStateInputV2` | Producer state input without an epoch. |
+| `PresenceStateInputV2` | Source-aware producer state input without an epoch. The `interaction` variant requires `source: "interaction"`, `state: "waiting"`, interaction data, and `input_required` attention; it excludes progress and subagent summary. |
 | `PresenceTerminalInputV2` | Producer terminal input without an epoch. |
 | `PresenceWithdrawInputV2` | Producer withdrawal input without an epoch. |
-| `PresenceStateV2` | Epoch-tagged wire state. |
+| `PresenceStateV2` | Source-aware, epoch-tagged wire state with the same source/state constraints as the producer input. |
 | `PresenceTerminalV2` | Epoch-tagged wire terminal. |
 | `PresenceWithdrawV2` | Epoch-tagged wire withdrawal. |
 | `ConsumerReadyV2` | Epoch-tagged, fixed-capability consumer-ready payload. |

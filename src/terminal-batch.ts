@@ -1,5 +1,5 @@
 import { parsePresenceTerminalV2 } from "./schema.ts";
-import { denseArray, frozen, isInteger } from "./strict.ts";
+import { denseArray, frozen, frozenRecord, isInteger } from "./strict.ts";
 import type { TerminalBatch, TerminalOutcome, TerminalTuple } from "./types.ts";
 
 const RECORD_PATTERN = /^(pi|subagent):(0|[1-9][0-9]{0,6}):(0|[1-9][0-9]{0,6}):(completed|failed|cancelled)$/;
@@ -14,7 +14,7 @@ function validOverflow(value: unknown): value is number {
 function ownTuple(value: unknown): TerminalTuple | undefined {
   const terminal = parsePresenceTerminalV2(value);
   if (!terminal) return undefined;
-  return frozen({ source: terminal.source, generation: terminal.generation, eventId: terminal.eventId, outcome: terminal.outcome });
+  return frozenRecord({ source: terminal.source, generation: terminal.generation, eventId: terminal.eventId, outcome: terminal.outcome });
 }
 
 function format(records: readonly TerminalTuple[]): string {
@@ -35,19 +35,19 @@ export function encodeTerminalBatch(values: readonly unknown[], overflow = 0): T
   }
   const value = format(sorted);
   if (new TextEncoder().encode(value).byteLength > 128) throw new TypeError("Terminal batch exceeds 128 bytes");
-  return frozen({ value, overflow, records: frozen(sorted) });
+  return frozenRecord({ value, overflow, records: frozen(sorted) });
 }
 
 export function parseTerminalBatch(value: unknown, overflow: unknown = 0): TerminalBatch | undefined {
   if (typeof value !== "string" || !validOverflow(overflow) || new TextEncoder().encode(value).byteLength > 128) return undefined;
-  if (value === "") return frozen({ value: "", overflow, records: frozen([]) });
+  if (value === "") return frozenRecord({ value: "", overflow, records: frozen([]) });
   const parts = value.split(",");
   if (parts.length > 3 || parts.some(part => !RECORD_PATTERN.test(part))) return undefined;
   const records: TerminalTuple[] = [];
   for (const part of parts) {
     const match = RECORD_PATTERN.exec(part);
     if (!match) return undefined;
-    const tuple = frozen({ source: match[1] as "pi" | "subagent", generation: Number(match[2]), eventId: Number(match[3]), outcome: match[4] as TerminalOutcome });
+    const tuple = frozenRecord({ source: match[1] as "pi" | "subagent", generation: Number(match[2]), eventId: Number(match[3]), outcome: match[4] as TerminalOutcome });
     if (!isInteger(tuple.generation) || !isInteger(tuple.eventId)) return undefined;
     records.push(tuple);
   }
