@@ -12,7 +12,7 @@ A producer activated after a consumer immediately sees that registered consumer.
 
 ## Synchronous delivery requirement
 
-For every active consumer, the registry calls the producer emitter with an epoch-tagged frozen wire event. The delivery receipt is private, bound to the exact payload identity, target consumer, producer incarnation, source, and channel name, and exists only while `emit` executes. `accept` consumes it before parsing.
+For every active consumer, the registry calls the producer emitter with an epoch-tagged frozen wire event. The delivery receipt is private, bound to the exact payload identity, target consumer activation, producer incarnation, source, and channel name, and exists only while `emit` executes. `accept` consumes it before parsing.
 
 Therefore the event bus **must dispatch synchronously**. A queued or delayed delivery, a replayed captured payload, a payload accepted twice, a payload sent to another consumer, or an independently constructed schema-valid payload is rejected. An emitter exception is best-effort observer failure: it does not undo already coherent retention.
 

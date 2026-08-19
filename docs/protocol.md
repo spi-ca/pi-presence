@@ -40,7 +40,7 @@ Producer input DTOs are epoch-neutral: they must not contain `sessionEpoch`. The
 }
 ```
 
-`progress.total` is at least `1`, and `completed <= total`. `interaction` is permitted only for `interaction` / `waiting`, requires `input_required` attention, and excludes progress and subagent summary. `input_required` is otherwise invalid. `blocked` requires `pi` or `subagent` with `waiting`. `failure` requires `pi` or `subagent` with `error`, except `subagent` may use it when its summary reports a positive `failed` count. `subagents` is permitted only for the `subagent` source.
+`progress.total` is at least `1`, and `completed <= total`. `interaction` is permitted only for `interaction` / `waiting`, requires `input_required` attention, and excludes progress and subagent summary. `input_required` is otherwise invalid. `blocked` requires `pi` or `subagent` with `waiting`. `failure` requires `pi` or `subagent` with `error`; a `subagent` non-error state may instead use explicit `failure` attention when it includes the exact seven-field `subagents` aggregate. That aggregate is authoritative for this exception, so `failed: 0` remains valid. `subagents` is permitted only for the `subagent` source.
 
 The registry changes an emitted retained state's `attention.occurrence` to `retained` during replay. Consumers must treat retained state as a state update, not a new edge.
 

@@ -169,6 +169,78 @@ test("producer clean deactivation clears retained and all source fences for a fr
   expect((events[1] as { generation: number }).generation).toBe(0);
 });
 
+test("the same consumer handle resets fences for a replacement producer lifecycle", () => {
+  const current = consumer("pi-cmux-presence", a), visible: unknown[] = [];
+  const receive = (name: string, event: unknown) => { const accepted = current.accept(name, event); if (accepted) visible.push(accepted); };
+  const first = producer("pi", receive);
+  expect(current.activate()).toBe(true); expect(first.activate()).toBe(true);
+  expect(first.publishState(state(4, 4))).toBe(true);
+  expect(visible).toHaveLength(1);
+  expect(current.deactivate()).toBe(true);
+  expect(first.deactivate()).toBe(true);
+  const second = producer("pi", receive);
+  expect(second.activate()).toBe(true);
+  expect(second.publishState(state(0, 0))).toBe(true);
+  expect(current.activate()).toBe(true);
+  expect(visible).toHaveLength(2);
+  expect(visible[1]).toMatchObject({ generation: 0, sequence: 0, source: "pi" });
+});
+
+test("a receipt from a previous consumer activation is rejected after reactivation", () => {
+  const current = consumer("pi-cmux-presence", a); let stale: unknown; let deliveries = 0;
+  const source = producer("pi", (name, event) => {
+    if (deliveries++ === 0) {
+      expect(current.deactivate()).toBe(true);
+      expect(current.activate()).toBe(true);
+      stale = current.accept(name, event);
+      return;
+    }
+    expect(current.accept(name, event)).toBeDefined();
+  });
+  expect(current.activate()).toBe(true); expect(source.activate()).toBe(true);
+  expect(source.publishState(state())).toBe(true);
+  expect(stale).toBeUndefined();
+});
+
+test("registry delivery records ignore polluted inherited optional fields and discriminants", () => {
+  const keys = ["state", "eventId", "attention"] as const;
+  const original = new Map(keys.map(key => [key, Object.getOwnPropertyDescriptor(Object.prototype, key)]));
+  try {
+    Object.defineProperties(Object.prototype, {
+      state: { value: "inherited-state", configurable: true },
+      eventId: { value: 999, configurable: true },
+      attention: { value: { reason: "failure", occurrence: "new" }, configurable: true },
+    });
+    const target = consumer("pi-cmux-presence", a); const names: string[] = [], received: unknown[] = [];
+    const source = producer("pi", (name, event) => { names.push(name); const accepted = target.accept(name, event); if (accepted) received.push(accepted); });
+    expect(source.activate()).toBe(true);
+    expect(source.publishState({ ...state(0, 0), state: "waiting", attention: { reason: "blocked", occurrence: "new" } })).toBe(true);
+    expect(target.activate()).toBe(true);
+    expect(source.withdraw(withdraw(0, 1))).toBe(true);
+    expect(source.publishState(state(1, 0))).toBe(true);
+    expect(source.publishTerminal(terminal(1, 1))).toBe(true);
+    expect(names).toEqual([EVENT_NAMES.state, EVENT_NAMES.withdraw, EVENT_NAMES.state, EVENT_NAMES.terminal]);
+    expect(received).toHaveLength(4);
+    const [retained, withdrawn, current, completed] = received as Array<Record<string, unknown>>;
+    for (const event of [retained, withdrawn, current, completed]) expect(Object.getPrototypeOf(event)).toBeNull();
+    expect(retained.attention).toEqual({ reason: "blocked", occurrence: "retained" });
+    expect(Object.getPrototypeOf(retained.attention as object)).toBeNull();
+    expect(retained.eventId).toBeUndefined();
+    expect(withdrawn.state).toBeUndefined(); expect(withdrawn.eventId).toBeUndefined(); expect(withdrawn.attention).toBeUndefined();
+    expect(current.eventId).toBeUndefined(); expect(current.attention).toBeUndefined();
+    expect(completed.state).toBeUndefined(); expect(completed.attention).toBeUndefined(); expect(completed.eventId).toBe(0);
+    expect(Object.getPrototypeOf(target.ready)).toBeNull();
+    expect(Object.getPrototypeOf(target.ready.consumer)).toBeNull();
+    expect((target.ready as Record<string, unknown>).state).toBeUndefined();
+  } finally {
+    for (const key of keys) {
+      const descriptor = original.get(key);
+      if (descriptor) Object.defineProperty(Object.prototype, key, descriptor);
+      else delete (Object.prototype as Record<string, unknown>)[key];
+    }
+  }
+});
+
 test("global singleton property is immutable and reset is not public", () => {
   expect("resetForTests" in api).toBe(false);
   const source = producer("pi", () => undefined); source.activate();

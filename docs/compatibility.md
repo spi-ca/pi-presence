@@ -1,5 +1,7 @@
 # Compatibility and release boundary
 
+The current coordinated disposition and local validation evidence are in [`completion-audit.md`](completion-audit.md).
+
 ## Canonical release
 
 The canonical shared-protocol package is `@pi/presence` from repository [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). [`v2-20260818-2`](https://github.com/spi-ca/pi-presence/tree/v2-20260818-2) is an immutable published release. Release references must use an immutable tag/tree URL rather than a mutable branch URL; once published, a tag is never moved or recreated. The protocol version remains `2`.
@@ -31,7 +33,7 @@ A coordinated V2 release should verify all of the following:
 
 - imports use `@pi/presence` and the repository/release reference is the immutable tagged tree `spi-ca/pi-presence` / `v2-20260818-2`;
 - all four V2 channel names and the exact three ready capabilities are preserved;
-- producer-first and consumer-first retained-state replay work over a synchronous bus;
+- producer-first retained-state replay and consumer-first live delivery work over a synchronous bus;
 - malformed, delayed, forged, duplicate, and cross-consumer payloads fail closed;
 - withdrawals fence same-generation state and terminal data, while a higher-generation state starts a new lifecycle;
 - terminal projection accepts only canonical batches; and
