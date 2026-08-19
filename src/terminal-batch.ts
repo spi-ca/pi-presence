@@ -4,6 +4,7 @@ import type { TerminalBatch, TerminalOutcome, TerminalTuple } from "./types.ts";
 
 const RECORD_PATTERN = /^(pi|subagent):(0|[1-9][0-9]{0,6}):(0|[1-9][0-9]{0,6}):(completed|failed|cancelled)$/;
 const DECIMAL_PATTERN = /^(0|[1-9][0-9]{0,6})$/;
+const MAX_TERMINAL_BATCH_BYTES = 128;
 const order = (left: TerminalTuple, right: TerminalTuple) =>
   left.source.localeCompare(right.source) || left.generation - right.generation || left.eventId - right.eventId || left.outcome.localeCompare(right.outcome);
 
@@ -21,6 +22,10 @@ function format(records: readonly TerminalTuple[]): string {
   return records.map(record => `${record.source}:${record.generation}:${record.eventId}:${record.outcome}`).join(",");
 }
 
+function exceedsTerminalBatchByteLimit(value: string): boolean {
+  return value.length > MAX_TERMINAL_BATCH_BYTES || new TextEncoder().encode(value).byteLength > MAX_TERMINAL_BATCH_BYTES;
+}
+
 export function encodeTerminalBatch(values: readonly unknown[], overflow = 0): TerminalBatch {
   const input = denseArray(values, 3);
   if (!input || !validOverflow(overflow)) throw new TypeError("Invalid terminal batch");
@@ -34,12 +39,12 @@ export function encodeTerminalBatch(values: readonly unknown[], overflow = 0): T
     if (previous.source === current.source && previous.generation === current.generation && previous.eventId === current.eventId) throw new TypeError("Duplicate or conflicting terminal tuple");
   }
   const value = format(sorted);
-  if (new TextEncoder().encode(value).byteLength > 128) throw new TypeError("Terminal batch exceeds 128 bytes");
+  if (exceedsTerminalBatchByteLimit(value)) throw new TypeError("Terminal batch exceeds 128 bytes");
   return frozenRecord({ value, overflow, records: frozen(sorted) });
 }
 
 export function parseTerminalBatch(value: unknown, overflow: unknown = 0): TerminalBatch | undefined {
-  if (typeof value !== "string" || !validOverflow(overflow) || new TextEncoder().encode(value).byteLength > 128) return undefined;
+  if (typeof value !== "string" || !validOverflow(overflow) || exceedsTerminalBatchByteLimit(value)) return undefined;
   if (value === "") return frozenRecord({ value: "", overflow, records: frozen([]) });
   const parts = value.split(",");
   if (parts.length > 3 || parts.some(part => !RECORD_PATTERN.test(part))) return undefined;
