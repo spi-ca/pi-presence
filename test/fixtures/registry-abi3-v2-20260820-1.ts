@@ -1,10 +1,16 @@
+/**
+ * Historical ABI3 registry fixture copied from src/registry.ts at immutable tag
+ * v2-20260820-1 (annotated tag object 6aec2f339f390663ee0ea5fd8a1f04edf4466619,
+ * commit 33d1a7ee51eb1c8a399a101017c7bc454a158db2).
+ * It is executable only in load-order compatibility tests; do not update it with current behavior.
+ */
 import { types } from "node:util";
-import { EVENT_NAMES, CONSUMER_CAPABILITIES, CONSUMER_IDS, SOURCES, type ConsumerId, type ConsumerReadyEmit, type ConsumerReadyV2, type PresenceConsumerHandle, type PresenceEventV2, type PresenceProducerHandle, type PresenceSource, type PresenceState, type PresenceStateInputV2, type PresenceStateV2, type PresenceTerminalInputV2, type PresenceTerminalV2, type PresenceWithdrawInputV2, type PresenceWithdrawV2, type ProducerEmit } from "./types.ts";
-import { createSessionEpoch, isSessionEpoch, parsePresenceStateInputV2, parsePresenceStateV2, parsePresenceTerminalInputV2, parsePresenceTerminalV2, parsePresenceWithdrawInputV2, parsePresenceWithdrawV2 } from "./schema.ts";
-import { frozen, frozenRecord, ownDataRecord } from "./strict.ts";
+import { EVENT_NAMES, CONSUMER_CAPABILITIES, CONSUMER_IDS, SOURCES, type ConsumerId, type ConsumerReadyEmit, type ConsumerReadyV2, type PresenceConsumerHandle, type PresenceEventV2, type PresenceProducerHandle, type PresenceSource, type PresenceState, type PresenceStateInputV2, type PresenceStateV2, type PresenceTerminalInputV2, type PresenceTerminalV2, type PresenceWithdrawInputV2, type PresenceWithdrawV2, type ProducerEmit } from "../../src/types.ts";
+import { createSessionEpoch, isSessionEpoch, parsePresenceStateInputV2, parsePresenceStateV2, parsePresenceTerminalInputV2, parsePresenceTerminalV2, parsePresenceWithdrawInputV2, parsePresenceWithdrawV2 } from "../../src/schema.ts";
+import { frozen, frozenRecord, ownDataRecord } from "../../src/strict.ts";
 
 const REGISTRY_SYMBOL = Symbol.for("@pi/presence/registry");
-const ABI = "@pi/presence:0.1.0:opaque-handles:4";
+const ABI = "@pi/presence:0.1.0:opaque-handles:3";
 const INTERFACE = "createPresenceProducer/createPresenceConsumer";
 
 type Fence = { generation: number; sequence: number; withdrawnGeneration: number; withdrawnSequence: number; terminalGeneration: number; terminalHighWater: number };
@@ -145,7 +151,7 @@ function createGlobalRegistry(): GlobalRegistry {
 function validGlobalRegistry(value: unknown): value is GlobalRegistry {
   if (value === null || typeof value !== "object" || types.isProxy(value) || !Object.isFrozen(value)) return false;
   const record = ownDataRecord(value, ["abi", "interface", "createProducer", "createConsumer"]);
-  return !!record && record.abi === ABI && record.interface === INTERFACE && typeof record.createProducer === "function" && !types.isProxy(record.createProducer) && typeof record.createConsumer === "function" && !types.isProxy(record.createConsumer);
+  return !!record && record.abi === ABI && record.interface === INTERFACE && typeof record.createProducer === "function" && typeof record.createConsumer === "function";
 }
 function globalRegistry(): GlobalRegistry | undefined {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, REGISTRY_SYMBOL);

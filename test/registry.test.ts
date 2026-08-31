@@ -202,6 +202,26 @@ test("a receipt from a previous consumer activation is rejected after reactivati
   expect(stale).toBeUndefined();
 });
 
+test("a live-only terminal receipt is fenced across consumer reactivation", () => {
+  const current = consumer("pi-cmux-presence", a); let stale: unknown; let reactivated = false; const accepted: unknown[] = [];
+  const source = producer("pi", (name, event) => {
+    if (!reactivated) {
+      reactivated = true;
+      expect(current.deactivate()).toBe(true);
+      expect(current.activate()).toBe(true);
+      stale = current.accept(name, event);
+      return;
+    }
+    const received = current.accept(name, event); if (received) accepted.push(received);
+  });
+  expect(current.activate()).toBe(true); expect(source.activate()).toBe(true);
+  expect(source.publishTerminal(terminal())).toBe(true);
+  expect(stale).toBeUndefined();
+  expect(source.publishTerminal(terminal(0, 1, 1))).toBe(true);
+  expect(accepted).toHaveLength(1);
+  expect(accepted[0]).toMatchObject({ eventId: 1, generation: 0, sequence: 1 });
+});
+
 test("registry delivery records ignore polluted inherited optional fields and discriminants", () => {
   const keys = ["state", "eventId", "attention"] as const;
   const original = new Map(keys.map(key => [key, Object.getOwnPropertyDescriptor(Object.prototype, key)]));
@@ -253,4 +273,25 @@ test("an accessor-backed global registry slot fails closed without invoking its 
   const script = `Object.defineProperty(globalThis, Symbol.for("@pi/presence/registry"), { get() { throw new Error("getter invoked"); }, configurable: false }); const api = await import(${JSON.stringify(entry)}); if (api.createPresenceProducer({ source: "pi", emit() {} }) !== undefined) throw new Error("did not fail closed");`;
   const child = Bun.spawn({ cmd: ["bun", "-e", script], stdout: "pipe", stderr: "pipe" });
   expect(await child.exited).toBe(0);
+});
+
+test("proxied global registry facade methods fail closed without invocation", async () => {
+  const entry = new URL("../index.ts", import.meta.url).href;
+  const abi = "@pi/presence:0.1.0:opaque-handles:4";
+  for (const proxiedMethod of ["createProducer", "createConsumer"]) {
+    const script = `let calls = 0; const proxied = new Proxy(() => { calls += 1; return undefined; }, { apply() { calls += 1; return undefined; } }); const facade = Object.freeze({ abi: ${JSON.stringify(abi)}, interface: "createPresenceProducer/createPresenceConsumer", createProducer: ${JSON.stringify(proxiedMethod)} === "createProducer" ? proxied : () => { calls += 1; return undefined; }, createConsumer: ${JSON.stringify(proxiedMethod)} === "createConsumer" ? proxied : () => { calls += 1; return undefined; } }); Object.defineProperty(globalThis, Symbol.for("@pi/presence/registry"), { value: facade, writable: false, configurable: false }); const api = await import(${JSON.stringify(entry)}); if (api.createPresenceProducer({ source: "pi", emit() {} }) !== undefined || api.createPresenceConsumer({ id: "pi-cmux-presence" }) !== undefined || calls !== 0) throw new Error("proxied facade method was accepted or invoked");`;
+    const child = Bun.spawn({ cmd: ["bun", "-e", script], stdout: "pipe", stderr: "pipe" });
+    expect(await child.exited).toBe(0);
+  }
+});
+
+test("ABI3 v2-20260820-1 fixture and corrected registry reject each other in both load orders", async () => {
+  const entry = new URL("../index.ts", import.meta.url).href;
+  const historical = new URL("./fixtures/registry-abi3-v2-20260820-1.ts", import.meta.url).href;
+  const historicalFirst = `const legacy = await import(${JSON.stringify(historical)}); if (!legacy.createPresenceProducer({ source: "pi", emit() {} }) || !legacy.createPresenceConsumer({ id: "pi-cmux-presence" })) throw new Error("ABI3 fixture did not create handles"); const current = await import(${JSON.stringify(entry)}); if (current.createPresenceProducer({ source: "todo", emit() {} }) !== undefined || current.createPresenceConsumer({ id: "pi-herdr-presence" }) !== undefined) throw new Error("ABI4 accepted ABI3 authority");`;
+  const correctedFirst = `const current = await import(${JSON.stringify(entry)}); if (!current.createPresenceProducer({ source: "pi", emit() {} }) || !current.createPresenceConsumer({ id: "pi-cmux-presence" })) throw new Error("ABI4 registry did not create handles"); const legacy = await import(${JSON.stringify(historical)}); if (legacy.createPresenceProducer({ source: "todo", emit() {} }) !== undefined || legacy.createPresenceConsumer({ id: "pi-herdr-presence" }) !== undefined) throw new Error("ABI3 accepted ABI4 authority");`;
+  for (const script of [historicalFirst, correctedFirst]) {
+    const child = Bun.spawn({ cmd: ["bun", "-e", script], stdout: "pipe", stderr: "pipe" });
+    expect(await child.exited).toBe(0);
+  }
 });
