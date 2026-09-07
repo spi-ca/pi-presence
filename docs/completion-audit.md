@@ -2,7 +2,7 @@
 
 Date: 2026-08-28
 
-**Canonical published release:** [`v2-20260828-1`](https://github.com/spi-ca/pi-presence/tree/v2-20260828-1) is the immutable canonical release of the corrected registry package. The private registry ABI-generation fence detects known ABI3/ABI4 version skew only; public protocol version `2`, V2 channels, and DTOs are unchanged. Published and historical tags are preserved in [`release-history.md`](release-history.md).
+**Canonical published release:** [`v2-20260907-1`](https://github.com/spi-ca/pi-presence/tree/v2-20260907-1) is the immutable canonical release with compatibility and CI validation hardening. The private registry ABI-generation fence detects known ABI3/ABI4 version skew only; public protocol version `2`, V2 channels, DTOs, and runtime API are unchanged. Published and historical tags are preserved in [`release-history.md`](release-history.md).
 
 This tracked record replaces the stale untracked workspace audit. Historical pull requests are merged. Native macOS/cmux live validation remains unavailable, so this record does not claim it.
 
@@ -12,7 +12,7 @@ This tracked record replaces the stale untracked workspace audit. Historical pul
 | --- | --- | --- | --- | --- |
 | PRES-001 | High | `pi-presence` | `src/registry.ts`; `test/registry.test.ts` | Fixed: stale consumer-fence handling. |
 | PRES-002 | Medium | `pi-presence` | `src/types.ts`; `src/schema.ts`; `test/types.test.ts`; `test/protocol.test.ts` | Fixed: type and parser contracts agree. |
-| PRES-003 | High | `pi-presence` | `src/registry.ts`; `test/registry.test.ts`; `test/fixtures/registry-abi3-v2-20260820-1.ts` | Fixed in canonical `v2-20260828-1`: ABI4 rejects ABI3 registry authority in either load order using the executable immutable-tag-derived fixture; proxied facade methods also fail closed. |
+| PRES-003 | High | `pi-presence` | `src/registry.ts`; `test/registry.test.ts`; `test/fixtures/registry-abi3-v2-20260820-1.ts` | Fixed in `v2-20260828-1` and retained by canonical `v2-20260907-1`: ABI4 rejects ABI3 registry authority in either load order using the executable immutable-tag-derived fixture; proxied facade methods also fail closed. |
 | SUB-001 | Medium | `pi-subagent` | `pi-subagent/index.ts`; `pi-subagent/test/entrypoint/index.test.ts` | Fixed: scheduler startup publication is current. |
 | SUB-002 | Low | `pi-subagent` | `pi-subagent/test/integration/pi-presence-producer.test.ts` | Fixed: newest-terminal fixture ordering. |
 | HERDR-001 | Medium | `pi-herdr-presence` | `pi-herdr-presence/src/runtime.ts`; `pi-herdr-presence/test/runtime-startup-regressions.test.ts`; `pi-herdr-presence/test/runtime-lifecycle-safety.test.ts` | Fixed: startup live notifications are not lost. |
@@ -49,4 +49,4 @@ These are merged historical records, not newly created PRs or evidence of a new 
 
 ## Release sequencing
 
-`v2-20260828-1` is the immutable canonical published release. Producers and consumers that share a runtime must pin the same `@pi/presence` release as coordinated release policy. Same-realm code is trusted; the registry does not authenticate it. The ABI-generation fence detects known ABI3/ABI4 skew and fails closed, but cannot prove coordinated same-release pinning. This durable policy does not move a `pi-presence` pin to a feature branch.
+`v2-20260907-1` is the immutable canonical published release. Producers and consumers that share a runtime must pin the same `@pi/presence` release as coordinated release policy. Same-realm code is trusted; the registry does not authenticate it. The ABI-generation fence detects known ABI3/ABI4 skew and fails closed, but cannot prove coordinated same-release pinning. This durable policy does not move a `pi-presence` pin to a feature branch.
