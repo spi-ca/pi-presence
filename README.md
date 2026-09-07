@@ -2,7 +2,7 @@
 
 Shared, dependency-free V2 presence protocol for same-runtime Pi observers. It emits strict, frozen DTOs and canonical terminal batches; it starts no timers, connections, commands, or background work.
 
-**Canonical published release:** [`v2-20260828-1`](https://github.com/spi-ca/pi-presence/tree/v2-20260828-1) is the immutable canonical release of this corrected package. The canonical package is `@pi/presence` in [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). Release references use immutable tag/tree URLs, never mutable branch URLs; published tags are never moved or recreated. Historical tags are recorded in [`docs/release-history.md`](docs/release-history.md). The public protocol version remains `2` and channel names remain V2.
+**Canonical published release:** [`v2-20260907-1`](https://github.com/spi-ca/pi-presence/tree/v2-20260907-1) is the immutable canonical release of this corrected package. The canonical package is `@pi/presence` in [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). Release references use immutable tag/tree URLs, never mutable branch URLs; published tags are never moved or recreated. Historical tags are recorded in [`docs/release-history.md`](docs/release-history.md). Compatibility and CI validation are hardened; the public protocol version remains `2`, channel names remain V2, and the runtime API is unchanged.
 
 ## Use
 
@@ -29,4 +29,4 @@ First install bus listeners that call `accept`, then activate a consumer. Delive
 
 Same-realm code is trusted: this package does not authenticate it. All producers and consumers in one runtime must use the same `@pi/presence` release as a coordinated release-pinning policy. The private ABI-generation fence is not authentication; it detects known ABI3/ABI4 version skew and rejects a different registry rather than delegating to stale behavior. It does not change public V2 channels or DTOs.
 
-Read [`docs/protocol.md`](docs/protocol.md) for wire rules, [`docs/lifecycle.md`](docs/lifecycle.md) for activation and fencing, [`docs/terminal-batch.md`](docs/terminal-batch.md) for projection grammar, [`docs/compatibility.md`](docs/compatibility.md) for release boundaries, and [`docs/api.md`](docs/api.md) for exports. The normative examples are in [`fixtures/normative.json`](fixtures/normative.json).
+Read [`docs/protocol.md`](docs/protocol.md) for wire rules, [`docs/lifecycle.md`](docs/lifecycle.md) for activation and fencing, [`docs/terminal-batch.md`](docs/terminal-batch.md) for projection grammar, [`docs/compatibility.md`](docs/compatibility.md) for release boundaries, [`docs/development.md`](docs/development.md) for local and CI verification, and [`docs/api.md`](docs/api.md) for exports. The normative examples are in [`fixtures/normative.json`](fixtures/normative.json).
