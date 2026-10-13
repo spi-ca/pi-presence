@@ -1,10 +1,10 @@
 # Compatibility and release boundary
 
-The current coordinated disposition and local validation evidence are in [`completion-audit.md`](completion-audit.md).
+Historical coordinated dispositions and local validation evidence are in [`completion-audit.md`](completion-audit.md); that audit does not establish acceptance of the Pi 1.2.0 batch.
 
 ## Canonical release
 
-The canonical shared-protocol package is `@pi/presence` from repository [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). [`v2-20260907-1`](https://github.com/spi-ca/pi-presence/tree/v2-20260907-1) is the canonical published release with compatibility and CI validation hardening. Release references use an immutable tag/tree URL rather than a mutable branch URL, and a published tag is never moved or recreated. Historical published tags are listed in [`release-history.md`](release-history.md). The public protocol version remains `2`, and the runtime API is unchanged.
+The canonical shared-protocol package is `@pi/presence` from repository [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). [`v2-20261013-1`](https://github.com/spi-ca/pi-presence/tree/v2-20261013-1) is the canonical coordinated release target for the Pi 1.2.0 batch. Release references use an immutable tag/tree URL rather than a mutable branch URL, and a published tag is never moved or recreated. Historical published tags and release status are listed in [`release-history.md`](release-history.md). This batch changes release documentation only; runtime source, public protocol version `2`, V2 channels, DTOs, runtime API, and private ABI generation remain unchanged from `v2-20261009-1`. The package has no Pi dependency, so package-level Bun CI and import smoke are not Pi 1.2.0 host or live terminal acceptance evidence.
 
 The only presence channels are:
 
@@ -37,7 +37,7 @@ The package is same-runtime and event-driven. It does not define a socket, RPC m
 
 A coordinated V2 release should verify all of the following:
 
-- imports pin `@pi/presence` to the same coordinated canonical release, [`v2-20260907-1`](https://github.com/spi-ca/pi-presence/tree/v2-20260907-1);
+- after publication, imports pin `@pi/presence` to the same coordinated canonical release, [`v2-20261013-1`](https://github.com/spi-ca/pi-presence/tree/v2-20261013-1);
 - all four V2 channel names and the exact three ready capabilities are preserved;
 - producer-first retained-state replay and consumer-first live delivery work over a synchronous bus;
 - malformed, delayed, forged, duplicate, and cross-consumer payloads fail closed;

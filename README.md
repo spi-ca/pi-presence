@@ -2,7 +2,7 @@
 
 Shared, dependency-free V2 presence protocol for same-runtime Pi observers. It emits strict, frozen DTOs and canonical terminal batches; it starts no timers, connections, commands, or background work.
 
-**Canonical published release:** [`v2-20260907-1`](https://github.com/spi-ca/pi-presence/tree/v2-20260907-1) is the immutable canonical release of this corrected package. The canonical package is `@pi/presence` in [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). Release references use immutable tag/tree URLs, never mutable branch URLs; published tags are never moved or recreated. Historical tags are recorded in [`docs/release-history.md`](docs/release-history.md). Compatibility and CI validation are hardened; the public protocol version remains `2`, channel names remain V2, and the runtime API is unchanged.
+**Canonical coordinated release reference:** [`v2-20261013-1`](https://github.com/spi-ca/pi-presence/tree/v2-20261013-1) is the immutable release target for the Pi 1.2.0 batch. The canonical package is `@pi/presence` in [`spi-ca/pi-presence`](https://github.com/spi-ca/pi-presence). Release references use immutable tag/tree URLs, never mutable branch URLs; published tags are never moved or recreated. Historical tags and release status are recorded in [`docs/release-history.md`](docs/release-history.md). This batch updates release documentation only: runtime source, public protocol version `2`, V2 channels, DTOs, runtime API, and private ABI generation are unchanged from `v2-20261009-1`. The package has no Pi dependency; its Bun CI and package smoke do not establish Pi 1.2.0 host or live terminal acceptance.
 
 ## Use
 
