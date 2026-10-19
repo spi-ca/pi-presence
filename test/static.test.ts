@@ -15,6 +15,8 @@ test("contains no legacy channel, runtime dependencies, install hooks, polling, 
   expect(manifest.name).toBe("@pi/presence");
   for (const key of ["dependencies", "optionalDependencies", "peerDependencies"]) expect(key in manifest, key).toBe(false);
   expect(manifest.devDependencies).toEqual({ "@types/bun": "1.3.14", typescript: "5.9.3" });
+  expect("packageManager" in manifest).toBe(false);
+  expect(manifest.engines).toEqual({ bun: ">=1.4.2" });
   const scripts = manifest.scripts as Record<string, string>;
   expect(Object.keys(scripts).some(key => /^(pre|post)?install$/.test(key))).toBe(false);
   expect(manifest.exports).toEqual({ ".": "./index.ts", "./fixtures/normative.json": "./fixtures/normative.json" });
